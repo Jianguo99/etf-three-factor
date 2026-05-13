@@ -1,131 +1,147 @@
 ---
-name: etf-three-factor
-description: 三因子ETF监控系统 — 追踪国家队（中央汇金）ETF操作信号。支持：① 数据获取（腾讯财经行情 + 东方财富份额）② 本地SQLite存档 ③ 三因子分析（量能P50% + 方向P20% + 份额P30%）④ HTML报告生成 ⑤ 邮件发送。当用户需要运行ETF三因子分析、查询国家队信号、查看每日监测报告、或设置定时任务时使用。
+name: etf-three-factor-v7
+description: 🛡️ 三因子ETF国家队资金监测系统 v7 — 追踪国家队（中央汇金）ETF操作信号。全新数据源（akshare交易所官方数据）、完整历史回溯、一键分析+邮件。支持：① 数据获取（腾讯财经K线 + akshare上交所/深交所份额）② 本地SQLite存档 ③ 三因子分析（量能P50% + 方向P20% + 份额P30%）④ HTML可视化报告 ⑤ 邮件发送（支持QQ邮箱/任意SMTP）。当用户需要运行ETF三因子分析、查询国家队信号、查看每日监测报告、或设置定时任务时使用。
 ---
 
-# etf-three-factor — 三因子ETF监控系统
+# 🛡️ etf-three-factor-v7 — 三因子ETF监测系统
+
+> **v7 重大升级**: push2.eastmoney.com 数据源长期中断，完全替换为 akshare 交易所官方API，支持完整历史回溯。
 
 ## 核心文件
 
-- **`scripts/etf_v6_threefactor.py`** — 主分析脚本，完整流水线
-- **`scripts/etf_data_store.py`** — SQLite数据存储模块
+- **`scripts/etf_v7_threefactor.py`** — 主分析脚本，一键流水线
+- **`scripts/etf_data_store.py`** — SQLite本地数据存储模块
 - **`references/etf_model.md`** — 三因子模型详细说明
-- **`references/config.md`** — 配置指南
+- **`references/config.md`** — 配置与部署指南
 
 ---
 
-## 调用模式
+## 🚀 快速开始
 
 ### 一键完整运行（推荐）
 ```bash
-cd ~/.qclaw/skills/etf-three-factor/scripts
-python3 etf_v6_threefactor.py
+cd ~/.etf-skill/scripts
+python3 etf_v7_threefactor.py
 ```
-执行：获取数据 → 存档 → 三因子分析 → 生成HTML → 保存JSON
+自动执行完整流水线：获取数据 → 存档 → 分析 → 生成HTML → 保存JSON
 
 ### 分功能调用
 
-| 任务 | 命令 | 说明 |
+| 功能 | 命令 | 说明 |
 |------|------|------|
-| 仅采集当日份额入库 | `python3 etf_v6_threefactor.py --record` | 不跑分析，只采集push2实时份额 |
-| 查看数据库状态 | `python3 etf_v6_threefactor.py --stats` | 显示记录数/日期范围/份额覆盖率 |
-| 分析特定日期 | `python3 etf_v6_threefactor.py --date 2026-04-30` | 回溯历史分析 |
-| 生成报告+发邮件 | `python3 etf_v6_threefactor.py --send` | 完整流水线+邮件发送至 28289062@qq.com |
+| 📊 完整分析 | `python3 etf_v7_threefactor.py` | 一键全流程 |
+| 📅 分析特定日期 | `python3 etf_v7_threefactor.py --date 2026-04-30` | 历史回溯分析 |
+| 📤 生成报告+发邮件 | `python3 etf_v7_threefactor.py --send` | 完整+邮件 |
+| 📡 仅采集份额入库 | `python3 etf_v7_threefactor.py --record` | 只记录不含分析 |
+| 📦 查看数据库状态 | `python3 etf_v7_threefactor.py --stats` | 统计信息 |
 
 ---
 
-## 输出文件
+## 📊 输出文件
 
 | 文件 | 位置 | 说明 |
 |------|------|------|
-| HTML报告 | `~/.qclaw/workspace/ETF三因子分析-终版.html` | 16:9可视化报告 |
-| JSON数据 | `~/.qclaw/workspace/ETF三因子分析-终版.json` | 纯数据，方便程序调用 |
-| SQLite DB | `~/.qclaw/workspace/etf_history.db` | 历史数据本地存储 |
-| 份额历史 | `~/.qclaw/workspace/etf_shares_history.json` | 份额数据JSON备份 |
+| HTML报告 | `~/.etf-skill/workspace/ETF三因子分析-v7.html` | 16:9可视化报告 |
+| JSON数据 | `~/.etf-skill/workspace/ETF三因子分析-v7.json` | 纯数据 |
+| SQLite DB | `~/.etf-skill/workspace/etf_history.db` | 历史数据本地存储 |
+| 份额历史 | `~/.etf-skill/workspace/etf_shares_history.json` | 份额JSON备份 |
 
 ---
 
-## 三因子模型（权重）
+## 🧠 三因子模型
 
 ```
 综合概率 = 量能概率 × 50% + 方向概率 × 20% + 份额概率 × 30%
 ```
 
-| 因子 | 权重 | 数据来源 | 说明 |
-|------|------|----------|------|
-| 量能概率 | 50% | 腾讯财经API | 当日成交量 ÷ 20日均量（倍量） |
-| 方向概率 | 20% | 腾讯财经API | 护盘特征：逆市涨+超额+前几日跌+尾盘 |
-| 份额概率 | 30% | 东方财富push2 | 一级市场申赎，日份额变化/20日均 |
+| 因子 | 权重 | 来源 | 说明 |
+|------|------|------|------|
+| 量能概率 | 50% | 腾讯财经K线 | 日成交量 ÷ 20日均量 |
+| 方向概率 | 20% | 腾讯财经K线 | 护盘特征：逆市+超额+前几日跌 |
+| 份额概率 | 30% | akshare交易所 | 日份额变化检测一级市场申赎 |
 
-**信号分级：**
-- 🔴 综合概率 ≥70% → 高确信，国家队大概率在增持
-- 🟡 综合概率 50~70% → 中等关注
-- 🟢 综合概率 <50% → 正常
+**信号分级**: 🔴 ≥70% 高确信 | 🟡 50~70% 中等 | ⚪ <50% 正常
 
 ---
 
-## 监控ETF列表
+## 🔗 数据源（v7）
 
-| 代码 | 名称 | 跟踪指数 |
-|------|------|----------|
-| 510300 | 华泰柏瑞沪深300ETF | 沪深300 |
-| 510310 | 易方达沪深300ETF | 沪深300 |
-| 510330 | 华夏沪深300ETF | 沪深300 |
-| 159919 | 嘉实沪深300ETF | 沪深300 |
-| 510050 | 华夏上证50ETF | 上证50 |
-| 510500 | 华泰柏瑞中证500ETF | 中证500 |
-| 512100 | 南方中证1000ETF | 中证1000 |
+| 数据 | API | 回溯能力 |
+|------|-----|----------|
+| K线行情 | `web.ifzq.gtimg.cn` | 60天历史 |
+| 上交所份额 | `akshare.fund_etf_scale_sse(date)` | ✅ 完整历史 |
+| 深交所份额 | `akshare.fund_scale_daily_szse(start,end)` | ✅ 完整历史 |
+
+> ⚠️ 份额数据**盘后更新**（约19:00后），盘中运行将自动使用最新可用日。
 
 ---
 
-## 邮件配置
+## 📧 邮件配置（必读 ⚠️）
 
-使用环境变量 `QQMAIL_AUTH_CODE` 或 `SMTP_PASS` 存储QQ邮箱授权码：
+邮件功能依赖环境变量，首次使用前必须配置：
+
 ```bash
-export QQMAIL_AUTH_CODE="your_auth_code_here"
-# 永久写入 ~/.zshrc 或 ~/.bashrc
+# 必填项
+export ETF_EMAIL_FROM="你的邮箱@qq.com"
+export ETF_EMAIL_TO="你的收件邮箱@qq.com"
+export ETF_SMTP_PASS="你的16位授权码"
+
+# 永久写入 ~/.zshrc（推荐）
+echo 'export ETF_EMAIL_FROM="你的邮箱@qq.com"' >> ~/.zshrc
+echo 'export ETF_EMAIL_TO="你的邮箱@qq.com"' >> ~/.zshrc
+echo 'export ETF_SMTP_PASS="你的授权码"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-邮件发送目标：`28289062@qq.com`（小贺FIRE了）
+详细配置说明见 `references/config.md`
 
 ---
 
-## 定时任务设置
+## ⏰ 定时任务
 
-建议每个工作日 16:30 运行（收盘后采集份额数据）：
+建议工作日 16:30 运行：
 
-```
+```bash
 openclaw cron add
-  → name: "ETF三因子日报·交易日16:30"
-  → schedule: "30 16 * * 1-5" (Asia/Shanghai)
-  → message: "运行 ETF 三因子分析，然后发邮件"
-  → sessionTarget: isolated
+# name: "ETF三因子日报-v7"
+# schedule: 30 16 * * 1-5 (Asia/Shanghai)
+# command: python3 ~/.etf-skill/scripts/etf_v7_threefactor.py --send
 ```
 
 ---
 
-## 数据库查询示例
+## 📈 监控ETF
 
-```python
-import sys
-sys.path.insert(0, "~/.qclaw/skills/etf-three-factor/scripts")
-from etf_data_store import ETFDataStore
+| 代码 | 名称 | 跟踪指数 | 交易所 |
+|------|------|----------|--------|
+| 510300 | 华泰柏瑞沪深300ETF | 沪深300 | 上交所 |
+| 510310 | 易方达沪深300ETF | 沪深300 | 上交所 |
+| 510330 | 华夏沪深300ETF | 沪深300 | 上交所 |
+| 159919 | 嘉实沪深300ETF | 沪深300 | 深交所 |
+| 510050 | 华夏上证50ETF | 上证50 | 上交所 |
+| 510500 | 华泰柏瑞中证500ETF | 中证500 | 上交所 |
+| 512100 | 南方中证1000ETF | 中证1000 | 上交所 |
 
-store = ETFDataStore()
+---
 
-# 查看数据库状态
-stats = store.get_stats()
-print(f"共{stats['total_records']}条记录，{stats['total_dates']}个交易日")
+## 🔧 环境依赖
 
-# 查询某日数据
-rows = store.get_date_summary("2026-05-08")
-for r in rows:
-    print(f"{r['name']}: CP={r['composite_prob']}% 份额={r['shares_yi']}亿")
+- Python 3.7+
+- **akshare** — `pip3 install akshare`
+- 其余为 Python 标准库（json, urllib, sqlite3, smtplib, email, argparse）
 
-# 查询某ETF历史份额
-shares = store.get_range(code="510300", start_date="2026-04-01")
-```
+---
 
-更多模型细节和配置说明：
-- 三因子模型详情 → `references/etf_model.md`
-- 环境配置/邮件/SMTP → `references/config.md`
+## v6 → v7 升级说明
+
+| 项目 | v6 | v7 |
+|------|----|----|
+| 份额数据源 | push2.eastmoney.com（已挂） | akshare交易所官方 |
+| 历史回溯 | ❌ 不可回溯 | ✅ 完整回溯 |
+| 数据可靠性 | 依赖第三方实时接口 | 来自上交所/深交所 |
+| 首次运行 | 仅当天数据 | 自动回补20天历史 |
+| 邮件配置 | 硬编码邮箱 | ✅ 环境变量，可自由配置 |
+
+更多详情:
+- 📐 模型数学原理 → `references/etf_model.md`
+- ⚙️ 环境配置/部署 → `references/config.md`

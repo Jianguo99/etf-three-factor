@@ -2,7 +2,7 @@
 """
 ETF本地数据存储模块 — SQLite数据库
 =====================================
-目的: 解决 push2 API 只提供最新份额数据、无法回溯历史的问题。
+目的: 本地持久化ETF历史数据，支持三因子模型回溯分析。
 
 功能:
   - 自动建库建表
@@ -24,7 +24,7 @@ ETF本地数据存储模块 — SQLite数据库
 import sqlite3, json, os, sys
 from datetime import datetime, timedelta
 
-DB_PATH = os.path.expanduser("~/.qclaw/workspace/etf_history.db")
+DB_PATH = os.path.expanduser(os.environ.get("ETF_WORKSPACE", "~/.etf-skill/workspace")) + "/etf_history.db"
 
 ETFS = {
     "510300": {"n": "华泰柏瑞沪深300ETF", "idx": "沪深300"},
